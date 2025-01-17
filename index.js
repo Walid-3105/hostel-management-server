@@ -118,14 +118,34 @@ async function run() {
     });
 
     // meals related api----------------------------------------------
-    app.post("/meals", verifyToken, verifyAdmin, async (req, res) => {
+    app.post("/meal", verifyToken, verifyAdmin, async (req, res) => {
       const data = req.body;
       const result = await mealCollection.insertOne(data);
       res.send(result);
     });
 
-    app.get("/meals", async (req, res) => {
+    app.get("/meal", async (req, res) => {
       const result = await mealCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.get("/meal/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await mealCollection.findOne(query);
+      res.send(result);
+    });
+
+    app.patch("/meal/:id", async (req, res) => {
+      const item = req.body;
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          likes: item.likes,
+        },
+      };
+      const result = await mealCollection.updateOne(filter, updatedDoc);
       res.send(result);
     });
 
