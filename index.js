@@ -25,6 +25,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     const userCollection = client.db("hostelDB").collection("users");
+    const mealCollection = client.db("hostelDB").collection("meals");
 
     // jwt related api
 
@@ -114,6 +115,18 @@ async function run() {
         admin = user?.role === "admin";
       }
       res.send({ admin });
+    });
+
+    // meals related api----------------------------------------------
+    app.post("/meals", verifyToken, verifyAdmin, async (req, res) => {
+      const data = req.body;
+      const result = await mealCollection.insertOne(data);
+      res.send(result);
+    });
+
+    app.get("/meals", async (req, res) => {
+      const result = await mealCollection.find().toArray();
+      res.send(result);
     });
 
     // Connect the client to the server	(optional starting in v4.7)
