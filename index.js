@@ -26,6 +26,7 @@ async function run() {
   try {
     const userCollection = client.db("hostelDB").collection("users");
     const mealCollection = client.db("hostelDB").collection("meals");
+    const requestCollection = client.db("hostelDB").collection("requests");
 
     // jwt related api
 
@@ -76,7 +77,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/users", async (req, res) => {
+    app.get("/users", verifyToken, verifyAdmin, async (req, res) => {
       const result = await userCollection.find().toArray();
       res.send(result);
     });
@@ -146,6 +147,30 @@ async function run() {
         },
       };
       const result = await mealCollection.updateOne(filter, updatedDoc);
+      res.send(result);
+    });
+
+    // request meal related api
+    app.post("/request", verifyToken, async (req, res) => {
+      const request = req.body;
+      const result = await requestCollection.insertOne(request);
+      res.send(result);
+    });
+
+    app.get("/request", async (req, res) => {
+      // todo: add verifyToken
+      const email = req.query.email;
+      if (!email) {
+        return res.status(400).send({ message: "Email is Needed" });
+      }
+      const filter = { email };
+      const result = await requestCollection.find(filter).toArray();
+      res.send(result);
+    });
+
+    app.get("/requests", async (req, res) => {
+      // todo: add verifyToken and verifyAdmin
+      const result = await requestCollection.find().toArray();
       res.send(result);
     });
 
