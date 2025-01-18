@@ -27,6 +27,7 @@ async function run() {
     const userCollection = client.db("hostelDB").collection("users");
     const mealCollection = client.db("hostelDB").collection("meals");
     const requestCollection = client.db("hostelDB").collection("requests");
+    const reviewCollection = client.db("hostelDB").collection("reviews");
 
     // jwt related api
 
@@ -138,12 +139,19 @@ async function run() {
     });
 
     app.patch("/meal/:id", async (req, res) => {
-      const item = req.body;
+      const { likes, reviews_count } = req.body;
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
+      // Fetch the existing meal to get current values
+      const existingMeal = await mealCollection.findOne(filter);
+
       const updatedDoc = {
         $set: {
-          likes: item.likes,
+          likes: likes !== undefined ? likes : existingMeal.likes,
+          reviews_count:
+            reviews_count !== undefined
+              ? reviews_count
+              : existingMeal.reviews_count,
         },
       };
       const result = await mealCollection.updateOne(filter, updatedDoc);
@@ -171,6 +179,24 @@ async function run() {
     app.get("/requests", async (req, res) => {
       // todo: add verifyToken and verifyAdmin
       const result = await requestCollection.find().toArray();
+      res.send(result);
+    });
+
+    // review meal related api
+    app.post("/review", async (req, res) => {
+      const request = req.body;
+      const result = await reviewCollection.insertOne(request);
+      res.send(result);
+    });
+
+    app.get("/review", async (req, res) => {
+      // todo: add verifyToken
+      const email = req.query.email;
+      if (!email) {
+        return res.status(400).send({ message: "Email is Needed" });
+      }
+      const filter = { email };
+      const result = await reviewCollection.find(filter).toArray();
       res.send(result);
     });
 
