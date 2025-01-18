@@ -5,7 +5,7 @@ const app = express();
 const port = process.env.PORT || 5000;
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const jwt = require("jsonwebtoken");
-// const stripe = require("stripe")(process.env.STRIPE_SECRET);
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 // middleware
 app.use(cors());
@@ -28,6 +28,7 @@ async function run() {
     const mealCollection = client.db("hostelDB").collection("meals");
     const requestCollection = client.db("hostelDB").collection("requests");
     const reviewCollection = client.db("hostelDB").collection("reviews");
+    const paymentCollection = client.db("hostelDB").collection("payments");
 
     // jwt related api
 
@@ -78,7 +79,19 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/users", verifyToken, verifyAdmin, async (req, res) => {
+    app.get("/users", async (req, res) => {
+      // todo: add verifyToken
+      const email = req.query.email;
+      if (!email) {
+        return res.status(400).send({ message: "Email is Needed" });
+      }
+      const filter = { email };
+      const result = await userCollection.find(filter).toArray();
+      res.send(result);
+    });
+
+    app.get("/allUsers", async (req, res) => {
+      // add verifyToken & verifyAdmin
       const result = await userCollection.find().toArray();
       res.send(result);
     });
@@ -142,9 +155,7 @@ async function run() {
       const { likes, reviews_count } = req.body;
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
-      // Fetch the existing meal to get current values
       const existingMeal = await mealCollection.findOne(filter);
-
       const updatedDoc = {
         $set: {
           likes: likes !== undefined ? likes : existingMeal.likes,
@@ -200,9 +211,66 @@ async function run() {
       res.send(result);
     });
 
+    // payment related api
+    app.post("/create-payment-intent", async (req, res) => {
+      const { amount } = req.body;
+      const price = parseInt(amount * 100);
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: price,
+        currency: "usd",
+        payment_method_types: ["card"],
+      });
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
+    });
+
+    app.post("/payment", async (req, res) => {
+      // add verifyToken
+      const payment = req.body;
+      const { email, packageName } = payment;
+      console.log(payment);
+      const paymentResult = await paymentCollection.insertOne(payment);
+
+      let badge;
+      if (packageName === "Silver") {
+        badge = "Silver";
+      } else if (packageName === "Gold") {
+        badge = "Gold";
+      } else if (packageName === "Platinum") {
+        badge = "Platinum";
+      } else {
+        badge = "Bronze";
+      }
+      const filter = { email };
+      const updatedDoc = {
+        $set: { badge },
+      };
+      const userResult = await userCollection.updateOne(filter, updatedDoc);
+      res.send({ paymentResult, userResult });
+    });
+
+    app.get("/payment", async (req, res) => {
+      // add verifyToken
+      const email = req.query.email;
+      if (!email) {
+        return res.status(400).send({ message: "Email is Needed" });
+      }
+      const filter = { email };
+      const result = await paymentCollection.find(filter).toArray();
+      res.send(result);
+    });
+
+    app.get("/payments", async (req, res) => {
+      // todo: add verifyToken and verifyAdmin
+      const result = await paymentCollection.find().toArray();
+      res.send(result);
+    });
+
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
     // Send a ping to confirm a successful connection
+    await client.connect();
 
     await client.db("admin").command({ ping: 1 });
     console.log(
