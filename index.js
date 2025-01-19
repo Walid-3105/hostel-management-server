@@ -121,7 +121,9 @@ async function run() {
     });
 
     //   admin Related api
-    app.get("/users/admin/:email", verifyToken, async (req, res) => {
+
+    app.get("/users/admin/:email", async (req, res) => {
+      // verifyToken and verifyAdmin
       const email = req.params.email;
       const query = { email: email };
       const user = await userCollection.findOne(query);
@@ -161,10 +163,27 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/meals", async (req, res) => {
+      const admin_email = req.query.admin_email;
+      if (!admin_email) {
+        return res.status(400).send({ message: "Email is Needed" });
+      }
+      const filter = { admin_email };
+      const result = await mealCollection.find(filter).toArray();
+      res.send(result);
+    });
+
     app.get("/meal/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await mealCollection.findOne(query);
+      res.send(result);
+    });
+
+    app.delete("/meal/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await mealCollection.deleteOne(query);
       res.send(result);
     });
 
