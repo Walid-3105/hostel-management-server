@@ -140,7 +140,24 @@ async function run() {
     });
 
     app.get("/meal", async (req, res) => {
-      const result = await mealCollection.find().toArray();
+      const { search, category, price } = req.query;
+      let query = {};
+      if (search && typeof search === "string" && search.trim() !== "") {
+        query.$or = [
+          { title: { $regex: search, $options: "i" } },
+          { category: { $regex: search, $options: "i" } },
+          { admin_name: { $regex: search, $options: "i" } },
+        ];
+      }
+
+      if (category && category !== "") {
+        query.category = category;
+      }
+
+      if (price) {
+        query.price = { $lte: parseInt(price) };
+      }
+      const result = await mealCollection.find(query).toArray();
       res.send(result);
     });
 
