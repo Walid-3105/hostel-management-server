@@ -188,7 +188,7 @@ async function run() {
     });
 
     app.patch("/meal/:id", async (req, res) => {
-      const { likes, reviews_count } = req.body;
+      const { likes, reviews_count, title, description, price } = req.body;
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const existingMeal = await mealCollection.findOne(filter);
@@ -199,6 +199,9 @@ async function run() {
             reviews_count !== undefined
               ? reviews_count
               : existingMeal.reviews_count,
+          title: title,
+          description: description,
+          price: price,
         },
       };
       const result = await mealCollection.updateOne(filter, updatedDoc);
