@@ -204,6 +204,13 @@ async function run() {
       res.send(result);
     });
 
+    app.delete("/request/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await requestCollection.deleteOne(query);
+      res.send(result);
+    });
+
     app.get("/requests", async (req, res) => {
       // todo: add verifyToken and verifyAdmin
       const result = await requestCollection.find().toArray();
@@ -225,6 +232,26 @@ async function run() {
       }
       const filter = { email };
       const result = await reviewCollection.find(filter).toArray();
+      res.send(result);
+    });
+
+    app.patch("/review/:id", async (req, res) => {
+      const data = req.body;
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          review: data.review,
+        },
+      };
+      const result = await reviewCollection.updateOne(filter, updatedDoc);
+      res.send(result);
+    });
+
+    app.delete("/review/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await reviewCollection.deleteOne(query);
       res.send(result);
     });
 
