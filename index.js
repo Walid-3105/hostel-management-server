@@ -26,6 +26,9 @@ async function run() {
   try {
     const userCollection = client.db("hostelDB").collection("users");
     const mealCollection = client.db("hostelDB").collection("meals");
+    const upComingMealCollection = client
+      .db("hostelDB")
+      .collection("upComingMeals");
     const requestCollection = client.db("hostelDB").collection("requests");
     const reviewCollection = client.db("hostelDB").collection("reviews");
     const paymentCollection = client.db("hostelDB").collection("payments");
@@ -199,12 +202,56 @@ async function run() {
             reviews_count !== undefined
               ? reviews_count
               : existingMeal.reviews_count,
-          title: title,
-          description: description,
-          price: price,
+          title: title !== undefined ? title : existingMeal.title,
+          description:
+            description !== undefined ? description : existingMeal.description,
+          price: price !== undefined ? price : existingMeal.price,
         },
       };
       const result = await mealCollection.updateOne(filter, updatedDoc);
+      res.send(result);
+    });
+
+    // upComingMeal related api
+
+    app.post("/upcomingMeals", async (req, res) => {
+      const upMeal = req.body;
+      const result = await upComingMealCollection.insertOne(upMeal);
+      res.send(result);
+    });
+
+    app.get("/upcomingMeals", async (req, res) => {
+      const result = await upComingMealCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.get("/upcomingMeals/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await upComingMealCollection.findOne(query);
+      res.send(result);
+    });
+
+    app.patch("/upcomingMeals/:id", async (req, res) => {
+      const { likes, likedBy } = req.body;
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const existingMeal = await upComingMealCollection.findOne(filter);
+      const updatedLikedBy = Array.isArray(likedBy) ? likedBy : [];
+      const updatedDoc = {
+        $set: {
+          likes: likes !== undefined ? likes : existingMeal.likes,
+          likedBy: updatedLikedBy,
+        },
+      };
+      const result = await upComingMealCollection.updateOne(filter, updatedDoc);
+      res.send(result);
+    });
+
+    app.delete("/upcomingMeals/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await upComingMealCollection.deleteOne(query);
       res.send(result);
     });
 
@@ -233,9 +280,31 @@ async function run() {
       res.send(result);
     });
 
+    app.patch("/request/:id", async (req, res) => {
+      // todo: add verifyToken and verifyAdmin
+      const data = req.body;
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          status: data.status,
+        },
+      };
+      const result = await requestCollection.updateOne(filter, updatedDoc);
+      res.send(result);
+    });
+
     app.get("/requests", async (req, res) => {
       // todo: add verifyToken and verifyAdmin
-      const result = await requestCollection.find().toArray();
+      const { search } = req.query;
+      let query = {};
+      if (search && typeof search === "string" && search.trim() !== "") {
+        query.$or = [
+          { name: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } },
+        ];
+      }
+      const result = await requestCollection.find(query).toArray();
       res.send(result);
     });
 
