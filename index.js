@@ -82,7 +82,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/users", async (req, res) => {
+    app.get("/users", verifyToken, async (req, res) => {
       // todo: add verifyToken
       const email = req.query.email;
       if (!email) {
@@ -93,7 +93,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/allUsers", async (req, res) => {
+    app.get("/allUsers", verifyToken, verifyAdmin, async (req, res) => {
       // add verifyToken & verifyAdmin
       const result = await userCollection.find().toArray();
       res.send(result);
@@ -125,17 +125,22 @@ async function run() {
 
     //   admin Related api
 
-    app.get("/users/admin/:email", async (req, res) => {
-      // verifyToken and verifyAdmin
-      const email = req.params.email;
-      const query = { email: email };
-      const user = await userCollection.findOne(query);
-      let admin = false;
-      if (user) {
-        admin = user?.role === "admin";
+    app.get(
+      "/users/admin/:email",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        // verifyToken and verifyAdmin
+        const email = req.params.email;
+        const query = { email: email };
+        const user = await userCollection.findOne(query);
+        let admin = false;
+        if (user) {
+          admin = user?.role === "admin";
+        }
+        res.send({ admin });
       }
-      res.send({ admin });
-    });
+    );
 
     // meals related api----------------------------------------------
     app.post("/meal", verifyToken, verifyAdmin, async (req, res) => {
@@ -145,8 +150,9 @@ async function run() {
     });
 
     app.get("/meal", async (req, res) => {
-      const { search, category, price } = req.query;
+      const { search, category, price, sort } = req.query;
       let query = {};
+
       if (search && typeof search === "string" && search.trim() !== "") {
         query.$or = [
           { title: { $regex: search, $options: "i" } },
@@ -162,11 +168,19 @@ async function run() {
       if (price) {
         query.price = { $lte: parseInt(price) };
       }
-      const result = await mealCollection.find(query).toArray();
+
+      let sortQuery = {};
+      if (sort === "likes") {
+        sortQuery.likes = -1;
+      } else if (sort === "reviews_count") {
+        sortQuery.reviews_count = -1;
+      }
+
+      const result = await mealCollection.find(query).sort(sortQuery).toArray();
       res.send(result);
     });
 
-    app.get("/meals", async (req, res) => {
+    app.get("/meals", verifyToken, verifyAdmin, async (req, res) => {
       const admin_email = req.query.admin_email;
       if (!admin_email) {
         return res.status(400).send({ message: "Email is Needed" });
@@ -183,14 +197,14 @@ async function run() {
       res.send(result);
     });
 
-    app.delete("/meal/:id", async (req, res) => {
+    app.delete("/meal/:id", verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await mealCollection.deleteOne(query);
       res.send(result);
     });
 
-    app.patch("/meal/:id", async (req, res) => {
+    app.patch("/meal/:id", verifyToken, async (req, res) => {
       const { likes, reviews_count, title, description, price } = req.body;
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
@@ -214,7 +228,7 @@ async function run() {
 
     // upComingMeal related api
 
-    app.post("/upcomingMeals", async (req, res) => {
+    app.post("/upcomingMeals", verifyToken, verifyAdmin, async (req, res) => {
       const upMeal = req.body;
       const result = await upComingMealCollection.insertOne(upMeal);
       res.send(result);
@@ -232,7 +246,7 @@ async function run() {
       res.send(result);
     });
 
-    app.patch("/upcomingMeals/:id", async (req, res) => {
+    app.patch("/upcomingMeals/:id", verifyToken, async (req, res) => {
       const { likes, likedBy } = req.body;
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
@@ -248,7 +262,7 @@ async function run() {
       res.send(result);
     });
 
-    app.delete("/upcomingMeals/:id", async (req, res) => {
+    app.delete("/upcomingMeals/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await upComingMealCollection.deleteOne(query);
@@ -262,7 +276,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/request", async (req, res) => {
+    app.get("/request", verifyToken, async (req, res) => {
       // todo: add verifyToken
       const email = req.query.email;
       if (!email) {
@@ -273,14 +287,14 @@ async function run() {
       res.send(result);
     });
 
-    app.delete("/request/:id", async (req, res) => {
+    app.delete("/request/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await requestCollection.deleteOne(query);
       res.send(result);
     });
 
-    app.patch("/request/:id", async (req, res) => {
+    app.patch("/request/:id", verifyToken, verifyAdmin, async (req, res) => {
       // todo: add verifyToken and verifyAdmin
       const data = req.body;
       const id = req.params.id;
@@ -294,7 +308,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/requests", async (req, res) => {
+    app.get("/requests", verifyToken, verifyAdmin, async (req, res) => {
       // todo: add verifyToken and verifyAdmin
       const { search } = req.query;
       let query = {};
@@ -315,7 +329,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/review", async (req, res) => {
+    app.get("/review", verifyToken, async (req, res) => {
       // todo: add verifyToken
       const email = req.query.email;
       if (!email) {
@@ -326,7 +340,7 @@ async function run() {
       res.send(result);
     });
 
-    app.patch("/review/:id", async (req, res) => {
+    app.patch("/review/:id", verifyToken, async (req, res) => {
       const data = req.body;
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
@@ -339,7 +353,7 @@ async function run() {
       res.send(result);
     });
 
-    app.delete("/review/:id", async (req, res) => {
+    app.delete("/review/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await reviewCollection.deleteOne(query);
@@ -347,7 +361,7 @@ async function run() {
     });
 
     // payment related api
-    app.post("/create-payment-intent", async (req, res) => {
+    app.post("/create-payment-intent", verifyToken, async (req, res) => {
       const { amount } = req.body;
       const price = parseInt(amount * 100);
 
@@ -361,7 +375,7 @@ async function run() {
       });
     });
 
-    app.post("/payment", async (req, res) => {
+    app.post("/payment", verifyToken, async (req, res) => {
       // add verifyToken
       const payment = req.body;
       const { email, packageName } = payment;
@@ -386,7 +400,7 @@ async function run() {
       res.send({ paymentResult, userResult });
     });
 
-    app.get("/payment", async (req, res) => {
+    app.get("/payment", verifyToken, async (req, res) => {
       // add verifyToken
       const email = req.query.email;
       if (!email) {
@@ -397,7 +411,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/payments", async (req, res) => {
+    app.get("/payments", verifyToken, verifyAdmin, async (req, res) => {
       // todo: add verifyToken and verifyAdmin
       const result = await paymentCollection.find().toArray();
       res.send(result);
@@ -405,9 +419,9 @@ async function run() {
 
     // Connect the client to the server	(optional starting in v4.7)
     // Send a ping to confirm a successful connection
-    await client.connect();
+    // await client.connect();
 
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
