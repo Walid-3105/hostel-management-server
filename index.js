@@ -43,7 +43,6 @@ async function run() {
 
     // middleware
     const verifyToken = (req, res, next) => {
-      // console.log("inside the verify token", req.headers.authorization);
       if (!req.headers.authorization) {
         return res.status(401).send({ message: "unauthorized Access" });
       }
@@ -82,7 +81,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/users", verifyToken, async (req, res) => {
+    app.get("/users", async (req, res) => {
       // todo: add verifyToken
       const email = req.query.email;
       if (!email) {
@@ -125,22 +124,17 @@ async function run() {
 
     //   admin Related api
 
-    app.get(
-      "/users/admin/:email",
-      verifyToken,
-      verifyAdmin,
-      async (req, res) => {
-        // verifyToken and verifyAdmin
-        const email = req.params.email;
-        const query = { email: email };
-        const user = await userCollection.findOne(query);
-        let admin = false;
-        if (user) {
-          admin = user?.role === "admin";
-        }
-        res.send({ admin });
+    app.get("/users/admin/:email", verifyToken, async (req, res) => {
+      // verifyToken and verifyAdmin
+      const email = req.params.email;
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      let admin = false;
+      if (user) {
+        admin = user?.role === "admin";
       }
-    );
+      res.send({ admin });
+    });
 
     // meals related api----------------------------------------------
     app.post("/meal", verifyToken, verifyAdmin, async (req, res) => {
@@ -180,7 +174,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/meals", verifyToken, verifyAdmin, async (req, res) => {
+    app.get("/meals", async (req, res) => {
       const admin_email = req.query.admin_email;
       if (!admin_email) {
         return res.status(400).send({ message: "Email is Needed" });
@@ -270,13 +264,13 @@ async function run() {
     });
 
     // request meal related api
-    app.post("/request", verifyToken, async (req, res) => {
+    app.post("/request", async (req, res) => {
       const request = req.body;
       const result = await requestCollection.insertOne(request);
       res.send(result);
     });
 
-    app.get("/request", verifyToken, async (req, res) => {
+    app.get("/request", async (req, res) => {
       // todo: add verifyToken
       const email = req.query.email;
       if (!email) {
@@ -329,7 +323,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/review", verifyToken, async (req, res) => {
+    app.get("/review", async (req, res) => {
       // todo: add verifyToken
       const email = req.query.email;
       if (!email) {
@@ -375,11 +369,10 @@ async function run() {
       });
     });
 
-    app.post("/payment", verifyToken, async (req, res) => {
+    app.post("/payment", async (req, res) => {
       // add verifyToken
       const payment = req.body;
       const { email, packageName } = payment;
-      console.log(payment);
       const paymentResult = await paymentCollection.insertOne(payment);
 
       let badge;
