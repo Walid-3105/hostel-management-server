@@ -5,10 +5,8 @@ const app = express();
 const port = process.env.PORT || 5000;
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const jwt = require("jsonwebtoken");
-const { default: OpenAI } = require("openai/index.mjs");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
-// import OpenAI from "openai";
 
 // middleware
 app.use(cors());
@@ -17,7 +15,8 @@ app.use(express.json());
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.ad8zj.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); // Use correct model name
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
   serverApi: {
@@ -54,13 +53,11 @@ async function run() {
         res.json({ reply });
       } catch (error) {
         console.error("Gemini Error:", error);
-        res
-          .status(500)
-          .json({
-            reply: `Error: ${
-              error.message || "Could not connect to the AI service."
-            }`,
-          });
+        res.status(500).json({
+          reply: `Error: ${
+            error.message || "Could not connect to the AI service."
+          }`,
+        });
       }
     });
 
