@@ -5,7 +5,10 @@ const app = express();
 const port = process.env.PORT || 5000;
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const jwt = require("jsonwebtoken");
+const { default: OpenAI } = require("openai/index.mjs");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+// import OpenAI from "openai";
 
 // middleware
 app.use(cors());
@@ -13,6 +16,8 @@ app.use(express.json());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.ad8zj.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); // Use correct model name
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
   serverApi: {
@@ -33,7 +38,31 @@ async function run() {
     const reviewCollection = client.db("hostelDB").collection("reviews");
     const paymentCollection = client.db("hostelDB").collection("payments");
 
-    // jwt related api
+    // Chat endpoint
+    app.post("/chat", async (req, res) => {
+      const { message } = req.body;
+
+      if (!message) {
+        return res.status(400).json({ reply: "Message is required." });
+      }
+
+      try {
+        const prompt = `You are a helpful chatbot for a hostel management system. User message: ${message}`;
+        const result = await model.generateContent(prompt);
+        const reply =
+          result.response.text().trim() || "Sorry, I didn’t understand that.";
+        res.json({ reply });
+      } catch (error) {
+        console.error("Gemini Error:", error);
+        res
+          .status(500)
+          .json({
+            reply: `Error: ${
+              error.message || "Could not connect to the AI service."
+            }`,
+          });
+      }
+    });
 
     app.post("/jwt", (req, res) => {
       const user = req.body;
@@ -393,7 +422,7 @@ async function run() {
       res.send({ paymentResult, userResult });
     });
 
-    app.get("/payment", verifyToken, async (req, res) => {
+    app.get("/payment", async (req, res) => {
       // add verifyToken
       const email = req.query.email;
       if (!email) {
